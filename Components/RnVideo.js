@@ -112,7 +112,7 @@ export default class RnVideo extends Component {
           <Video
             source={{uri: 'https://player.vimeo.com/external/206340985.hd.mp4?s=0b055000e30067f11d3e2537bceb7157b47475bc&profile_id=119&oauth2_token_id=57447761'}}
             resizeMode="cover"
-            style={{width: '100%', height: '50%', alignSelf: 'center'}}
+            style={{width: '100%', height: '50%', alignSelf: 'center', marginTop: '50%'}}
             repeat={true}
             onError={this.handleError}
             onLoadStart={this.handleLoadStart}
