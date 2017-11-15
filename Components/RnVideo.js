@@ -2,6 +2,7 @@ import React, {Component} from 'react';
 import {
   StyleSheet,
   Text,
+  TextInput,
   View,
   Dimensions,
   Animated
@@ -9,11 +10,14 @@ import {
 import Video from 'react-native-video';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
-import SampleVideo from '../Resources/792677592.mp4';
+import SampleVideo from '../Resources/647597071.mp4';
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   videoCover: {
     alignItems: 'center',
@@ -40,6 +44,18 @@ const styles = StyleSheet.create({
   },
   buffering: {
     backgroundColor: '#000'
+  },
+  header: {
+    fontSize: 30,
+    backgroundColor: 'transparent',
+    color: '#fff'
+  },
+  input: {
+    width: 300,
+    height: 50,
+    backgroundColor: '#FFF',
+    marginVertical: 15,
+    paddingLeft: 15,
   }
 });
 
@@ -108,16 +124,21 @@ export default class RnVideo extends Component {
 
     return (
       <View style={styles.container}>
-        <View style={error ? styles.error : (buffering ? styles.buffering : undefined)}>
+        <View style={error ? styles.error : (buffering ? styles.buffering : styles.container)}>
           <Video
-            source={{uri: 'https://player.vimeo.com/external/206340985.hd.mp4?s=0b055000e30067f11d3e2537bceb7157b47475bc&profile_id=119&oauth2_token_id=57447761'}}
+            source={SampleVideo}
             resizeMode="cover"
-            style={{width: '100%', height: '50%', alignSelf: 'center', marginTop: '50%'}}
-            repeat={true}
+            style={StyleSheet.absoluteFill}
+            repeat
             onError={this.handleError}
             onLoadStart={this.handleLoadStart}
             onBuffer={this.handleBuffer}
           />
+          <View>
+            <Text style={styles.header}>Login</Text>
+            <TextInput placeholder="Email" style={styles.input}/>
+            <TextInput secureTextEntry placeholder="Password" style={styles.input}/>
+          </View>
           <View style={styles.bufferCover}>
             {
               buffering &&
