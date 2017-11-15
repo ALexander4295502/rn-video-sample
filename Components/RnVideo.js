@@ -2,12 +2,12 @@ import React, {Component} from 'react';
 import {
   StyleSheet,
   Text,
-  TextInput,
   TouchableWithoutFeedback,
   View,
   Dimensions,
   ScrollView,
-  Animated
+  Animated,
+  PanResponder
 } from 'react-native';
 import Video from 'react-native-video';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -34,7 +34,17 @@ export default class RnVideo extends Component {
     this.position = {
       start: null,
       end: null
-    }
+    };
+    this.animated = new Animated.Value(0);
+  }
+
+  componentWillMount(){
+    this.panResponder = PanResponder.create({
+      onMoveShouldSetPanResponderCapture: () => {
+        this.triggerShowHide();
+        return false;
+      }
+    });
   }
 
   handleError = (meta) => {
@@ -91,6 +101,7 @@ export default class RnVideo extends Component {
   };
 
   handleLoad = (meta) => {
+    this.triggerShowHide();
     this.setState({
       duration: meta.duration
     });
@@ -120,10 +131,25 @@ export default class RnVideo extends Component {
   };
 
   handleProgressPress = (e) => {
-    console.log(e.nativeEvent.locationX);
     const position = e.nativeEvent.locationX;
     const progress = (position /250.0) * this.state.duration;
     this.player.seek(progress);
+  };
+
+  triggerShowHide = () => {
+    clearTimeout(this.hideTimeout);
+
+    Animated.timing(this.animated, {
+      toValue: 1,
+      duration: 100,
+    }).start();
+
+    this.hideTimeout = setTimeout(() => {
+      Animated.timing(this.animated, {
+        toValue: 0,
+        duration: 300
+      }).start();
+    }, 1500);
   };
 
   render() {
@@ -143,12 +169,28 @@ export default class RnVideo extends Component {
       ]
     };
 
+    const interpolatedControls = this.animated.interpolate({
+      inputRange: [0, 1],
+      outputRange: [48, 0],
+    });
+
+    const controlHideStyle = {
+      transform: [
+        {
+          translateY: interpolatedControls
+        }
+      ]
+    };
+
     return (
         <ScrollView scrollEventThrottle={16} onScroll={this.handleScroll}>
           <View style={styles.fakeContent}>
             <Text>{this.state.paused ? "Paused" : "Playing"}</Text>
           </View>
-          <View style={error ? styles.error : (buffering ? styles.buffering : styles.container)}>
+          <View
+            {...this.panResponder.panHandlers}
+            style={error ? styles.error : (buffering ? styles.buffering : styles.container)}
+          >
             <Video
               source={SampleVideo}
               resizeMode="contain"
@@ -164,7 +206,7 @@ export default class RnVideo extends Component {
               onEnd={this.handleEnd}
               ref={ref => this.player = ref}
             />
-            <View style={styles.controls}>
+            <Animated.View style={[styles.controls, controlHideStyle]}>
               <TouchableWithoutFeedback onPress={this.handleMainButtonTouch}>
                 <Icon name={!this.state.paused ? "pause" : "play"} size={30} color="#fff" />
               </TouchableWithoutFeedback>
@@ -183,7 +225,7 @@ export default class RnVideo extends Component {
               <Text style={styles.duration}>
                 {secondToTime(Math.floor(this.state.progress * this.state.duration))}
               </Text>
-            </View>
+            </Animated.View>
             {/*<View>*/}
               {/*<Text style={styles.header}>Login</Text>*/}
               {/*<TextInput placeholder="Email" style={styles.input}/>*/}
@@ -219,7 +261,8 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    overflow: 'hidden'
   },
   videoCover: {
     alignItems: 'center',
