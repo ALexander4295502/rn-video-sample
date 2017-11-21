@@ -2,11 +2,12 @@ import React, {Component} from 'react';
 import {
   StyleSheet,
   Text,
-  TextInput,
+  TouchableWithoutFeedback,
   View,
   Dimensions,
   ScrollView,
-  Animated
+  Animated,
+  PanResponder
 } from 'react-native';
 import Video from 'react-native-video';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -14,6 +15,10 @@ import SampleVideo from '../Resources/792677592.mp4';
 import ProgressBar from 'react-native-progress/Bar';
 
 const THRESHOLD = 150;
+
+secondToTime = (time) => {
+  return ~~(time/60) + ":" + (time % 60 < 10 ? "0" : "") + time % 60;
+};
 
 export default class RnVideo extends Component {
   constructor(props){
@@ -24,11 +29,22 @@ export default class RnVideo extends Component {
       animated: new Animated.Value(0),
       paused: true,
       duration: 0,
+      progress: 0,
     };
     this.position = {
       start: null,
       end: null
-    }
+    };
+    this.animated = new Animated.Value(0);
+  }
+
+  componentWillMount(){
+    this.panResponder = PanResponder.create({
+      onMoveShouldSetPanResponderCapture: () => {
+        this.triggerShowHide();
+        return false;
+      }
+    });
   }
 
   handleError = (meta) => {
@@ -84,6 +100,58 @@ export default class RnVideo extends Component {
     })
   };
 
+  handleLoad = (meta) => {
+    this.triggerShowHide();
+    this.setState({
+      duration: meta.duration
+    });
+  };
+
+  handleProgress = (progress) => {
+    this.setState({
+      progress: progress.currentTime / this.state.duration
+    });
+  };
+
+  handleEnd = (e) => {
+    this.setState({
+      paused: true
+    });
+  };
+
+  handleMainButtonTouch = () => {
+    if(this.state.progress >= 1) {
+      this.player.seek(0);
+    }
+    this.setState(state => {
+      return {
+        paused: !state.paused
+      };
+    });
+  };
+
+  handleProgressPress = (e) => {
+    const position = e.nativeEvent.locationX;
+    const progress = (position /250.0) * this.state.duration;
+    this.player.seek(progress);
+  };
+
+  triggerShowHide = () => {
+    clearTimeout(this.hideTimeout);
+
+    Animated.timing(this.animated, {
+      toValue: 1,
+      duration: 100,
+    }).start();
+
+    this.hideTimeout = setTimeout(() => {
+      Animated.timing(this.animated, {
+        toValue: 0,
+        duration: 300
+      }).start();
+    }, 1500);
+  };
+
   render() {
     // const windowSize = Dimensions.get("window");
     const {width} = Dimensions.get("window");
@@ -101,16 +169,32 @@ export default class RnVideo extends Component {
       ]
     };
 
+    const interpolatedControls = this.animated.interpolate({
+      inputRange: [0, 1],
+      outputRange: [48, 0],
+    });
+
+    const controlHideStyle = {
+      transform: [
+        {
+          translateY: interpolatedControls
+        }
+      ]
+    };
+
     return (
         <ScrollView scrollEventThrottle={16} onScroll={this.handleScroll}>
           <View style={styles.fakeContent}>
             <Text>{this.state.paused ? "Paused" : "Playing"}</Text>
           </View>
-          <View style={error ? styles.error : (buffering ? styles.buffering : styles.container)}>
+          <View
+            {...this.panResponder.panHandlers}
+            style={error ? styles.error : (buffering ? styles.buffering : styles.container)}
+          >
             <Video
               source={SampleVideo}
               resizeMode="contain"
-              style={style}
+              style={{width: "100%", height}}
               repeat
               onError={this.handleError}
               onLoadStart={this.handleLoadStart}
@@ -122,6 +206,26 @@ export default class RnVideo extends Component {
               onEnd={this.handleEnd}
               ref={ref => this.player = ref}
             />
+            <Animated.View style={[styles.controls, controlHideStyle]}>
+              <TouchableWithoutFeedback onPress={this.handleMainButtonTouch}>
+                <Icon name={!this.state.paused ? "pause" : "play"} size={30} color="#fff" />
+              </TouchableWithoutFeedback>
+              <TouchableWithoutFeedback onPress={this.handleProgressPress}>
+                <View>
+                  <ProgressBar
+                    progress={this.state.progress}
+                    color="#fff"
+                    unfilledColor="rgba(255,255,255,.5)"
+                    borderColor="#fff"
+                    width={250}
+                    height={20}
+                  />
+                </View>
+              </TouchableWithoutFeedback>
+              <Text style={styles.duration}>
+                {secondToTime(Math.floor(this.state.progress * this.state.duration))}
+              </Text>
+            </Animated.View>
             {/*<View>*/}
               {/*<Text style={styles.header}>Login</Text>*/}
               {/*<TextInput placeholder="Email" style={styles.input}/>*/}
@@ -157,7 +261,8 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    overflow: 'hidden'
   },
   videoCover: {
     alignItems: 'center',
@@ -202,5 +307,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#CCC',
     paddingTop: 250,
     alignItems: 'center',
-  }
+  },
+  controls: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    height: 48,
+    left: 0,
+    bottom: 0,
+    right: 0,
+    position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: 10,
+  },
+  duration: {
+    color: "#FFF",
+    marginLeft: 15,
+  },
 });
